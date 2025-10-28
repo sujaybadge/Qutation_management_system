@@ -410,6 +410,7 @@ def generate_pdfs_for_sellers(q: Quotation, seller_ids: List[int], template_code
 # --- Minimal Tkinter GUI ---
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import tksheet  # pip install tksheet
 
 class QuotationApp(tk.Tk):
     def __init__(self):
@@ -459,12 +460,35 @@ class QuotationApp(tk.Tk):
                                            values=[t.code for t in TemplateStyle.objects.all()])
         self.template_combo.grid(row=1, column=2, sticky="e", padx=4)
 
-        # Items CSV
-        itf = ttk.LabelFrame(self, text="Items (CSV: description,qty,rate per line)")
+        # Items Table (using tksheet)
+        itf = ttk.LabelFrame(self, text="Quotation Items")
         itf.pack(fill="both", expand=True, **pad)
-        self.items_text = tk.Text(itf, height=12)
-        self.items_text.pack(fill="both", expand=True, padx=4, pady=4)
+        itf.grid_columnconfigure(0, weight=1)
+        itf.grid_rowconfigure(0, weight=1)
 
+        self.items_sheet = tksheet.Sheet(itf, height=250)
+        self.items_sheet.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
+        self.items_sheet.headers(["Description", "Qty", "Rate"])
+        self.items_sheet.column_width(column=0, width=450)
+        self.items_sheet.column_width(column=1, width=80)
+        self.items_sheet.column_width(column=2, width=100)
+        self.items_sheet.align_columns(1, align="e")
+        self.items_sheet.align_columns(2, align="e")
+        # Enable spreadsheet-like interactions
+        self.items_sheet.enable_bindings("single_select", "drag_select", "row_select", "column_width_resize",
+                                         "double_click_column_resize", "arrowkeys", "right_click_popup_menu",
+                                         "rc_select", "rc_insert_row", "rc_delete_row", "copy", "cut", "paste", "delete", "undo", "edit_cell")
+
+        # Add/Remove buttons for items
+        buttons_frame = ttk.Frame(itf)
+        buttons_frame.grid(row=1, column=0, sticky="e", pady=(0, 4), padx=4)
+
+        add_btn = ttk.Button(buttons_frame, text="Add Row", command=self.items_sheet.insert_row)
+        add_btn.pack(side="left", padx=4)
+
+        remove_btn = ttk.Button(buttons_frame, text="Remove Row", command=self._remove_item_row)
+        remove_btn.pack(side="left")
+        
         # Notes + actions
         nf = ttk.LabelFrame(self, text="Notes & Actions")
         nf.pack(fill="x", **pad)
@@ -488,21 +512,25 @@ class QuotationApp(tk.Tk):
         # Build index->id map
         self._seller_id_map = [c.id for c in Company.objects.all().order_by("-is_main", "name")]
 
-    def _parse_items_csv(self) -> List[dict]:
+    def _remove_item_row(self):
+        selected_rows = self.items_sheet.get_selected_rows(get_cells=False)
+        if not selected_rows:
+            messagebox.showwarning("No Selection", "Please select a row to remove.")
+            return
+        if messagebox.askyesno("Confirm Delete", "Are you sure you want to remove the selected item(s)?"):
+            self.items_sheet.delete_rows(rows=selected_rows)
+
+    def _get_items_from_sheet(self) -> List[dict]:
         rows = []
-        for line in self.items_text.get("1.0", tk.END).splitlines():
-            if not line.strip():
-                continue
-            parts = [p.strip() for p in line.split(",")]
-            if len(parts) < 3:
-                continue
-            desc, qty, rate = parts[0], parts[1], parts[2]
+        for row_data in self.items_sheet.get_sheet_data():
+            desc, qty_str, rate_str = row_data[0], row_data[1], row_data[2]
             try:
-                qtyf = float(qty)
-                ratef = float(rate)
+                qty = float(qty_str or 0)
+                rate = float(rate_str or 0)
             except ValueError:
                 continue
-            rows.append({"description": desc, "qty": qtyf, "rate": ratef})
+            if str(desc).strip() and qty > 0 and rate >= 0:
+                rows.append({"description": desc, "qty": qty, "rate": rate})
         return rows
 
     def _selected_seller_ids(self) -> List[int]:
@@ -513,7 +541,7 @@ class QuotationApp(tk.Tk):
 
     def _on_generate(self):
         try:
-            items = self._parse_items_csv()
+            items = self._get_items_from_sheet()
             if not items:
                 messagebox.showerror("Items required", "Please add at least one item: description,qty,rate")
                 return
