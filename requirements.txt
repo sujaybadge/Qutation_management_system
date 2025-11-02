@@ -1,0 +1,5 @@
+django==4.2.14
+reportlab==4.2.2
+pillow==10.4.0
+phonenumbers==8.13.47
+tksheet==7.5.16
