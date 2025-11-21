@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Quotations | Quotation Studio{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Quotations</h1>
+        <p class="page-subtitle">Create, update, copy, or delete quotations. Select a row to continue.</p>
+    </div>
+    <div class="actions">
+        <a class="btn" href="{% url 'quotations:create' %}">+ New quotation</a>
+        <a class="btn-secondary btn" href="{% url 'quotations:buyer_create' %}">Add customer</a>
+        <a class="btn-secondary btn" href="{% url 'quotations:company_create' %}">Add company</a>
+    </div>
+</div>
+
+<div class="panel">
+    <form method="get" class="dual" style="margin-bottom:12px; gap:8px;">
+        <div>
+            <label class="page-subtitle">Search code or customer</label>
+            <input type="text" name="q" value="{{ q }}" placeholder="Search..." />
+        </div>
+        <div>
+            <label class="page-subtitle">Customer</label>
+            <select name="buyer">
+                <option value="">Any</option>
+                {% for b in buyers %}
+                    <option value="{{ b.id }}" {% if buyer_id|default:'' == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="page-subtitle">From</label>
+            <input type="date" name="from" value="{{ date_from }}">
+        </div>
+        <div>
+            <label class="page-subtitle">To</label>
+            <input type="date" name="to" value="{{ date_to }}">
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:6px;">
+            <button class="btn" type="submit">Filter</button>
+            <a class="btn-secondary btn" href="{% url 'quotations:list' %}">Clear</a>
+        </div>
+    </form>
+    {% if quotes %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Customer</th>
+                <th>Total</th>
+                <th>Created</th>
+                <th>Valid Until</th>
+                <th>Items</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for q in quotes %}
+            <tr>
+                <td><span class="tag accent">{{ q.code }}</span></td>
+                <td>
+                    <div>{{ q.buyer.name }}</div>
+                    <div class="page-subtitle">{{ q.buyer.phone|default:"" }}</div>
+                </td>
+                <td class="amount-cell">₹ {{ q.total }}</td>
+                <td>{{ q.created_at|date:"d M Y" }}</td>
+                <td>{{ q.valid_until|date:"d M Y" }}</td>
+                {% with item_count=q.items.all|length %}
+                <td><span class="tag amber">{{ item_count }} item{{ item_count|pluralize }}</span></td>
+                {% endwith %}
+                <td class="actions">
+                    <a class="btn-secondary btn" href="{% url 'quotations:edit' q.id %}">Edit</a>
+                    <a class="btn btn" href="{% url 'quotations:copy' q.id %}">Copy</a>
+                    <form method="post" action="{% url 'quotations:delete' q.id %}" style="display:inline" onsubmit="return confirm('Delete this quotation?');">
+                        {% csrf_token %}
+                        <button class="btn btn-danger" type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+        No quotations yet. Create your first one to get started.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

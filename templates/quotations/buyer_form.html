@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Add Customer{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Add customer</h1>
+        <p class="page-subtitle">Create a customer record and reuse it in quotes.</p>
+    </div>
+    <a class="btn-secondary btn" href="{% url 'quotations:list' %}">Back</a>
+</div>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="panel">
+        <div class="dual">
+            <div>
+                <label for="{{ form.name.id_for_label }}">Name</label>
+                {{ form.name }}{% for e in form.name.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+            </div>
+            <div>
+                <label for="{{ form.phone.id_for_label }}">Phone</label>
+                {{ form.phone }}{% for e in form.phone.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+            </div>
+            <div>
+                <label for="{{ form.email.id_for_label }}">Email</label>
+                {{ form.email }}{% for e in form.email.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+            </div>
+            <div>
+                <label for="{{ form.gstin.id_for_label }}">GSTIN (optional)</label>
+                {{ form.gstin }}{% for e in form.gstin.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+            </div>
+        </div>
+        <div class="field-row">
+            <label for="{{ form.address.id_for_label }}">Address</label>
+            {{ form.address }}{% for e in form.address.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="actions" style="margin-top:12px;">
+            <button class="btn" type="submit">Save customer</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

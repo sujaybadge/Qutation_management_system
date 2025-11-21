@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Delete quotation{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Delete quotation {{ quotation.code }}</h1>
+        <p class="page-subtitle">This will remove the quotation and its line items.</p>
+    </div>
+    <a class="btn-secondary btn" href="{% url 'quotations:list' %}">Cancel</a>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="panel">
+        <p>Are you sure you want to delete quotation <strong>{{ quotation.code }}</strong> for <strong>{{ quotation.buyer.name }}</strong>?</p>
+        <div class="actions" style="margin-top:12px;">
+            <button class="btn-danger btn" type="submit">Yes, delete it</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

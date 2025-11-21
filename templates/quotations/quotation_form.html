@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}{{ mode|capfirst }} quotation{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            {% if mode == "edit" %}Edit quotation {{ quotation.code }}
+            {% elif mode == "copy" %}Copy from {{ quotation.code }}
+            {% else %}New quotation{% endif %}
+        </h1>
+        <p class="page-subtitle">Buyer, notes, and line items all live here. Totals are recalculated with 18% tax on save.</p>
+    </div>
+    <div class="actions">
+        <a class="btn-secondary btn" href="{% url 'quotations:list' %}">Back to list</a>
+    </div>
+</div>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="panel">
+        {% if form.non_field_errors %}
+            <div class="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="dual">
+            <div>
+                <label for="{{ form.buyer.id_for_label }}">Customer</label>
+                {{ form.buyer }}
+                {% for error in form.buyer.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
+            </div>
+            <div>
+                <label for="{{ form.currency.id_for_label }}">Currency</label>
+                {{ form.currency }}
+                {% for error in form.currency.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
+            </div>
+            <div>
+                <label for="{{ form.valid_until.id_for_label }}">Valid until</label>
+                {{ form.valid_until }}
+                {% for error in form.valid_until.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
+            </div>
+            <div>
+                <label for="{{ form.notes.id_for_label }}">Notes / Terms</label>
+                {{ form.notes }}
+                {% for error in form.notes.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
+            </div>
+        </div>
+
+        {% if quotation %}
+            <div class="tag" style="margin: 6px 0 12px 0;">Current totals — Subtotal: ₹ {{ quotation.subtotal }} • Tax: ₹ {{ quotation.tax }} • Total: ₹ {{ quotation.total }}</div>
+        {% endif %}
+
+        <div class="items-table">
+            {{ items_formset.management_form }}
+            <datalist id="instruction-suggestions">
+                {% for text in instruction_suggestions %}
+                    <option value="{{ text }}"></option>
+                {% endfor %}
+            </datalist>
+            <datalist id="item-suggestions">
+                {% for text in catalog_items %}
+                    <option value="{{ text }}"></option>
+                {% endfor %}
+            </datalist>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:42%">Item & description</th>
+                        <th style="width:14%">Qty</th>
+                        <th style="width:16%">Rate</th>
+                        <th style="width:16%">Amount</th>
+                        <th style="width:12%"></th>
+                    </tr>
+                </thead>
+                <tbody id="items-body">
+                    {% for f in items_formset.forms %}
+                        <tr class="item-row" data-row>
+                            {{ f.id }}
+                            <td class="item-cell">
+                                <div>{{ f.item_name }}</div>
+                                <div style="margin-top:6px;">{{ f.description }}</div>
+                                {% for error in f.item_name.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
+                                {% for error in f.description.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
+                            </td>
+                            <td>{{ f.qty }}{% for error in f.qty.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}</td>
+                            <td>{{ f.rate }}{% for error in f.rate.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}</td>
+                            <td class="amount-cell"><span data-amount>--</span></td>
+                            <td class="remove-cell">
+                                {% if items_formset.can_delete %}
+                                    <input type="checkbox" style="display:none;" name="{{ f.DELETE.name }}" id="{{ f.DELETE.id_for_label }}">
+                                    <button type="button" class="btn btn-danger" data-remove>-</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="actions" style="margin-top:10px;">
+            <button type="button" class="btn-secondary btn" data-add-row>Add line item</button>
+            <div style="flex:1"></div>
+            <button type="submit" class="btn">Save quotation</button>
+        </div>
+    </div>
+</form>
+
+<template id="empty-item-row">
+    {% with f=items_formset.empty_form %}
+    <tr class="item-row" data-row>
+        {{ f.id }}
+        <td class="item-cell">
+            <div>{{ f.item_name }}</div>
+            <div style="margin-top:6px;">{{ f.description }}</div>
+        </td>
+        <td>{{ f.qty }}</td>
+        <td>{{ f.rate }}</td>
+        <td class="amount-cell"><span data-amount>--</span></td>
+        <td class="remove-cell">
+            {% if items_formset.can_delete %}
+                <input type="checkbox" style="display:none;" name="{{ f.DELETE.name }}" id="{{ f.DELETE.id_for_label }}">
+                <button type="button" class="btn btn-danger" data-remove>-</button>
+            {% endif %}
+        </td>
+    </tr>
+    {% endwith %}
+</template>
+
+<script>
+(function() {
+    const tableBody = document.getElementById('items-body');
+    const addBtn = document.querySelector('[data-add-row]');
+    const tmpl = document.getElementById('empty-item-row');
+    const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+    const catalogMap = {{ catalog_map_json|safe }};
+    const catalogMapLc = Object.entries(catalogMap || {}).reduce((acc, [k, v]) => {
+        acc[k.toLowerCase()] = v;
+        return acc;
+    }, {});
+
+    function formatAmount(num) {
+        if (!Number.isFinite(num) || num <= 0) return '--';
+        return num.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    function hookRow(row) {
+        const qty = row.querySelector('input[name$="-qty"]');
+        const rate = row.querySelector('input[name$="-rate"]');
+        const amountSlot = row.querySelector('[data-amount]');
+        const deleteInput = row.querySelector('input[name$="-DELETE"]');
+        const itemInput = row.querySelector('input[name$="-item_name"]');
+        const descInput = row.querySelector('input[name$="-description"]');
+
+        function fillDescriptionFromCatalog(force = false) {
+            if (!itemInput) return;
+            const val = itemInput.value.trim();
+            if (!val) return;
+            const match = catalogMap[val] || catalogMapLc[val.toLowerCase()];
+            if (match && (force || !descInput.value.trim())) {
+                descInput.value = match;
+            }
+        }
+
+        function update() {
+            const q = parseFloat(qty.value) || 0;
+            const r = parseFloat(rate.value) || 0;
+            amountSlot.textContent = formatAmount(q * r);
+        }
+        qty.addEventListener('input', update);
+        rate.addEventListener('input', update);
+        if (itemInput && descInput) {
+            const handleItemChange = () => fillDescriptionFromCatalog(true);
+            itemInput.addEventListener('input', handleItemChange);
+            itemInput.addEventListener('change', handleItemChange);
+        }
+        update();
+    }
+
+    document.querySelectorAll('.item-row').forEach(hookRow);
+
+    // Delegate remove clicks so it works for initial and dynamically added rows
+    tableBody.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-remove]');
+        if (!btn) return;
+        e.preventDefault();
+        const row = btn.closest('[data-row]');
+        if (!row) return;
+        const delInput = row.querySelector('input[name$="-DELETE"]');
+        if (delInput) {
+            delInput.checked = true;
+            delInput.value = 'on';
+        }
+        row.querySelectorAll('input, textarea').forEach(el => {
+            if (el === delInput) return;
+            el.value = '';
+        });
+        row.style.display = 'none';
+    });
+
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            const idx = parseInt(totalForms.value, 10);
+            const clone = tmpl.content.cloneNode(true);
+            clone.querySelectorAll('input, select, textarea, label').forEach(el => {
+                if (el.name) el.name = el.name.replace('__prefix__', idx);
+                if (el.id) el.id = el.id.replace('__prefix__', idx);
+            });
+            tableBody.appendChild(clone);
+            totalForms.value = idx + 1;
+            const newItemRow = tableBody.querySelectorAll('.item-row')[tableBody.querySelectorAll('.item-row').length - 1];
+            if (newItemRow) hookRow(newItemRow);
+        });
+    }
+})();
+</script>
+{% endblock %}

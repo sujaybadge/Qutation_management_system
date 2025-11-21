@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ buyer.name }} Quotes{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Quotations for {{ buyer.name }}</h1>
+        <p class="page-subtitle">Customer phone: {{ buyer.phone }} • Email: {{ buyer.email }}</p>
+    </div>
+    <div class="actions">
+        <a class="btn" href="{% url 'quotations:create' %}?buyer={{ buyer.id }}">New quotation</a>
+        <a class="btn-secondary btn" href="{% url 'quotations:buyer_list' %}">Back to customers</a>
+    </div>
+</div>
+
+<div class="panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Items</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for q in quotes %}
+            <tr>
+                <td>{{ q.code }}</td>
+                <td>{{ q.created_at|date:"d M Y" }}</td>
+                <td class="amount-cell">₹ {{ q.total }}</td>
+                {% with item_count=q.items.all|length %}
+                <td><span class="tag amber">{{ item_count }} item{{ item_count|pluralize }}</span></td>
+                {% endwith %}
+                <td class="actions">
+                    <a class="btn-secondary btn" href="{% url 'quotations:edit' q.id %}">Edit</a>
+                    <a class="btn btn" href="{% url 'quotations:copy' q.id %}">Copy</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="empty">No quotations for this customer yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

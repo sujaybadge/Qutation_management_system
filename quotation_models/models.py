@@ -23,6 +23,7 @@ class Buyer(models.Model):
     phone = models.CharField(max_length=50, blank=True, default="")
     email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True, default="")
+    gstin = models.CharField(max_length=32, blank=True, default="")
 
     class Meta:
         app_label = "quotation_models"
@@ -60,13 +61,37 @@ class Quotation(models.Model):
 
 class QuotationItem(models.Model):
     quotation = models.ForeignKey(Quotation, related_name="items", on_delete=models.CASCADE)
-    description = models.CharField(max_length=500)  # store "item: desc" for archival
+    item_name = models.CharField(max_length=200, blank=True, default="")
+    description = models.CharField(max_length=500, blank=True, default="")
     qty = models.DecimalField(max_digits=10, decimal_places=2)
     rate = models.DecimalField(max_digits=12, decimal_places=2)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
 
     class Meta:
         app_label = "quotation_models"
+
+
+class CatalogItem(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+    description = models.CharField(max_length=500, blank=True, default="")
+    last_used = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = "quotation_models"
+
+    def __str__(self):
+        return self.name
+
+
+class Instruction(models.Model):
+    text = models.CharField(max_length=500, unique=True)
+    last_used = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = "quotation_models"
+
+    def __str__(self):
+        return self.text
 
 class SellerQuote(models.Model):
     quotation = models.ForeignKey(Quotation, related_name="seller_quotes", on_delete=models.CASCADE)

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Delete company{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Delete company {{ company.name }}</h1>
+        <p class="page-subtitle">This action cannot be undone.</p>
+    </div>
+    <a class="btn-secondary btn" href="{% url 'quotations:company_list' %}">Cancel</a>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="panel">
+        <p>Are you sure you want to delete <strong>{{ company.name }}</strong>?</p>
+        <div class="actions" style="margin-top:12px;">
+            <button class="btn-danger btn" type="submit">Delete</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
