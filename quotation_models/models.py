@@ -1,5 +1,6 @@
 # quotation_models/models.py
 from django.db import models
+from django.contrib.auth.models import User
 
 class Company(models.Model):
     name = models.CharField(max_length=200)
@@ -45,6 +46,7 @@ class TemplateStyle(models.Model):
 class Quotation(models.Model):
     code = models.CharField(max_length=40, unique=True)
     buyer = models.ForeignKey(Buyer, on_delete=models.PROTECT)
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT)
     notes = models.TextField(blank=True, default="")
     currency = models.CharField(max_length=8, default="INR")
     created_at = models.DateTimeField(auto_now_add=True)

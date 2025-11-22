@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.contrib.auth.decorators import login_required
 
 from quotation_models.models import Buyer, CatalogItem, Company, Instruction, Quotation, QuotationItem
 from .forms import BuyerForm, CompanyForm, QuotationForm, get_item_formset
@@ -27,8 +28,9 @@ def home(request):
     return redirect("quotations:list")
 
 
+@login_required
 def quotation_list(request):
-    qs = Quotation.objects.select_related("buyer").prefetch_related("items").order_by("-created_at")
+    qs = Quotation.objects.filter(created_by=request.user).select_related("buyer").prefetch_related("items").order_by("-created_at")
     q = request.GET.get("q", "").strip()
     buyer_id = request.GET.get("buyer", "").strip()
     date_from = request.GET.get("from", "").strip()
@@ -59,15 +61,18 @@ def quotation_list(request):
     )
 
 
+@login_required
 def quotation_create(request):
     return _handle_quotation_form(request, mode="create")
 
 
+@login_required
 def quotation_copy(request, pk: int):
     source = get_object_or_404(Quotation.objects.prefetch_related("items"), pk=pk)
     return _handle_quotation_form(request, mode="copy", source=source)
 
 
+@login_required
 def quotation_edit(request, pk: int):
     quote = get_object_or_404(Quotation.objects.prefetch_related("items"), pk=pk)
     return _handle_quotation_form(request, instance=quote, mode="edit")
@@ -119,22 +124,22 @@ def _handle_quotation_form(request, mode: str, instance: Quotation | None = None
             quotation = form.save(commit=False)
             if not is_edit:
                 quotation.code = _generate_code()
+            quotation.created_by = request.user
             quotation.save()
 
-            # tie formset to the saved parent and process saves/deletes
             items_formset.instance = quotation
-            # delete marked objects
-            for obj in items_formset.deleted_objects:
-                obj.delete()
+            
+            # Save items and handle deletions
+            items = items_formset.save(commit=False)
+            
+            if is_edit:
+                for obj in items_formset.deleted_objects:
+                    obj.delete()
 
-            subtotal = Decimal("0.00")
-            items_to_save = items_formset.save(commit=False)
-            for item in items_to_save:
-                item.quotation = quotation
+            for item in items:
                 item.amount = _money(Decimal(item.qty or 0) * Decimal(item.rate or 0))
                 item.save()
-                subtotal += item.amount
-
+                
                 if item.item_name:
                     CatalogItem.objects.update_or_create(
                         name=item.item_name.strip(),
@@ -143,11 +148,10 @@ def _handle_quotation_form(request, mode: str, instance: Quotation | None = None
                 if item.description:
                     Instruction.objects.update_or_create(text=item.description.strip())
 
-            # ensure any objects not in formset save are removed
-            for stale in items_formset.get_queryset().exclude(pk__in=[i.pk for i in items_to_save if i.pk]):
-                if stale not in items_formset.deleted_objects:
-                    stale.delete()
-
+            # Recalculate totals from all items in the database
+            quotation.refresh_from_db()
+            subtotal = sum(item.amount for item in quotation.items.all())
+            
             quotation.subtotal = _money(subtotal)
             quotation.tax = _money(subtotal * TAX_RATE)
             quotation.total = _money(quotation.subtotal + quotation.tax)
@@ -177,6 +181,7 @@ def _handle_quotation_form(request, mode: str, instance: Quotation | None = None
     return render(request, "quotations/quotation_form.html", context)
 
 
+@login_required
 def quotation_delete(request, pk: int):
     quotation = get_object_or_404(Quotation, pk=pk)
     if request.method == "POST":
@@ -187,6 +192,7 @@ def quotation_delete(request, pk: int):
     return render(request, "quotations/quotation_confirm_delete.html", {"quotation": quotation})
 
 
+@login_required
 def company_create(request):
     form = CompanyForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -196,11 +202,13 @@ def company_create(request):
     return render(request, "quotations/company_form.html", {"form": form})
 
 
+@login_required
 def company_list(request):
     companies = Company.objects.order_by("-is_main", "name")
     return render(request, "quotations/company_list.html", {"companies": companies})
 
 
+@login_required
 def company_edit(request, pk: int):
     company = get_object_or_404(Company, pk=pk)
     form = CompanyForm(request.POST or None, instance=company)
@@ -211,6 +219,7 @@ def company_edit(request, pk: int):
     return render(request, "quotations/company_form.html", {"form": form, "company": company})
 
 
+@login_required
 def company_delete(request, pk: int):
     company = get_object_or_404(Company, pk=pk)
     if request.method == "POST":
@@ -221,6 +230,7 @@ def company_delete(request, pk: int):
     return render(request, "quotations/company_confirm_delete.html", {"company": company})
 
 
+@login_required
 def buyer_create(request):
     form = BuyerForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -230,11 +240,13 @@ def buyer_create(request):
     return render(request, "quotations/buyer_form.html", {"form": form})
 
 
+@login_required
 def buyer_list(request):
     buyers = Buyer.objects.order_by("name")
     return render(request, "quotations/buyer_list.html", {"buyers": buyers})
 
 
+@login_required
 def buyer_edit(request, pk: int):
     buyer = get_object_or_404(Buyer, pk=pk)
     form = BuyerForm(request.POST or None, instance=buyer)
@@ -245,6 +257,7 @@ def buyer_edit(request, pk: int):
     return render(request, "quotations/buyer_form.html", {"form": form, "buyer": buyer})
 
 
+@login_required
 def buyer_delete(request, pk: int):
     buyer = get_object_or_404(Buyer, pk=pk)
     if request.method == "POST":
@@ -255,7 +268,8 @@ def buyer_delete(request, pk: int):
     return render(request, "quotations/buyer_confirm_delete.html", {"buyer": buyer})
 
 
+@login_required
 def buyer_quotes(request, pk: int):
     buyer = get_object_or_404(Buyer, pk=pk)
-    quotes = Quotation.objects.filter(buyer=buyer).order_by("-created_at").prefetch_related("items")
+    quotes = Quotation.objects.filter(buyer=buyer, created_by=request.user).order_by("-created_at").prefetch_related("items")
     return render(request, "quotations/buyer_quotes.html", {"buyer": buyer, "quotes": quotes})
