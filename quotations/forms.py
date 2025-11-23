@@ -145,6 +145,7 @@ SellerQuoteFormSet = get_seller_formset()
 
 
 class QuotationBlockForm(forms.Form):
+    id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     buyer = forms.ModelChoiceField(queryset=Buyer.objects.order_by("name"))
     seller = forms.ModelChoiceField(queryset=Company.objects.order_by("-is_main", "name"))
     template = forms.ModelChoiceField(queryset=TemplateStyle.objects.order_by("code"))

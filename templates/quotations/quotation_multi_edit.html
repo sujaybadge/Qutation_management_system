@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Edit Multi Quotations{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Edit multiple quotations</h1>
+        <p class="page-subtitle">Each block represents a quotation. You can edit the details of each quotation below.</p>
+    </div>
+    <a class="btn-secondary btn" href="{% url 'quotations:list' %}">Back to list</a>
+</div>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    {{ block_formset.management_form }}
+    {% for bf, items, q in block_items %}
+    <div class="panel" style="margin-bottom:14px;">
+        {{ bf.id }}
+        <h3 class="page-title" style="font-size:18px; margin:0 0 8px 0;">Quotation {{ q.code }}</h3>
+        {% if bf.non_field_errors %}<div class="alert">{{ bf.non_field_errors }}</div>{% endif %}
+        <div class="dual">
+            <div>
+                <label>Customer</label>
+                {{ bf.buyer }}{% for e in bf.buyer.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+            </div>
+            <div>
+                <label>Seller</label>
+                {{ bf.seller }}{% for e in bf.seller.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+            </div>
+            <div>
+                <label>Template</label>
+                {{ bf.template }}{% for e in bf.template.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+            </div>
+            <div>
+                <label>Currency</label>
+                {{ bf.currency }}{% for e in bf.currency.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+            </div>
+            <div>
+                <label>Valid until</label>
+                {{ bf.valid_until }}{% for e in bf.valid_until.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+            </div>
+        </div>
+        <div class="field-row">
+            <label>Notes / Terms</label>
+            {{ bf.notes }}{% for e in bf.notes.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="items-table" style="margin-top:10px;">
+            {{ items.management_form }}
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:42%">Item & description</th>
+                        <th style="width:14%">Qty</th>
+                        <th style="width:16%">Rate</th>
+                        <th style="width:16%">Amount</th>
+                        <th style="width:12%"></th>
+                    </tr>
+                </thead>
+                <tbody id="items-body-{{ q.id }}">
+                    {% for f in items.forms %}
+                    <tr class="item-row" data-row>
+                        {{ f.id }}
+                        <td class="item-cell">
+                            <div>{{ f.item_name }}</div>
+                            <div style="margin-top:6px;">{{ f.description }}</div>
+                            {% for error in f.item_name.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
+                            {% for error in f.description.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
+                        </td>
+                        <td>{{ f.qty }}{% for error in f.qty.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}</td>
+                        <td>{{ f.rate }}{% for error in f.rate.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}</td>
+                        <td class="amount-cell"><span data-amount>--</span></td>
+                        <td class="remove-cell">
+                            {% if items.can_delete %}
+                                <input type="checkbox" style="display:none;" name="{{ f.DELETE.name }}" id="{{ f.DELETE.id_for_label }}">
+                                <button type="button" class="btn btn-danger" data-remove>-</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="actions" style="margin-top:8px;">
+                <button type="button" class="btn-secondary btn" data-add-row data-items-prefix="items-{{ q.id }}">Add line item</button>
+            </div>
+        </div>
+
+        {% if block_formset.can_delete %}
+        <div class="actions" style="margin-top:8px;">
+            <input type="checkbox" style="display:none;" name="blocks-{{ forloop.counter0 }}-DELETE" id="id_blocks-{{ forloop.counter0 }}-DELETE">
+            <button type="button" class="btn btn-danger" data-remove-block data-block-index="{{ forloop.counter0 }}">Remove this quotation</button>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="actions" style="margin-top:12px;">
+        <div style="flex:1"></div>
+        <button class="btn" type="submit">Save all</button>
+    </div>
+</form>
+
+<template id="empty-block-template">
+    {% with bf=block_formset.empty_form %}
+    <div class="panel" style="margin-bottom:14px;">
+        <h3 class="page-title" style="font-size:18px; margin:0 0 8px 0;">Quotation __N__</h3>
+        <div class="dual">
+            <div>{{ bf.buyer }}</div>
+            <div>{{ bf.seller }}</div>
+            <div>{{ bf.template }}</div>
+            <div>{{ bf.currency }}</div>
+            <div>{{ bf.valid_until }}</div>
+        </div>
+        <div class="field-row">{{ bf.notes }}</div>
+        <div class="items-table" style="margin-top:10px;">
+            <!-- items will be injected separately -->
+        </div>
+        {% if block_formset.can_delete %}
+        <div class="actions" style="margin-top:8px;">
+            <input type="checkbox" style="display:none;" name="blocks-__prefix__-DELETE" id="id_blocks-__prefix__-DELETE">
+            <button type="button" class="btn btn-danger" data-remove-block data-block-index="__prefix__">Remove this quotation</button>
+        </div>
+        {% endif %}
+    </div>
+    {% endwith %}
+</template>
+
+<template id="empty-item-row">
+    {% with f=item_formsets.0.empty_form %}
+    <tr class="item-row" data-row>
+        {{ f.id }}
+        <td class="item-cell">
+            <div>{{ f.item_name }}</div>
+            <div style="margin-top:6px;">{{ f.description }}</div>
+        </td>
+        <td>{{ f.qty }}</td>
+        <td>{{ f.rate }}</td>
+        <td class="amount-cell"><span data-amount>--</span></td>
+        <td class="remove-cell">
+            {% if item_formsets.0.can_delete %}
+                <input type="checkbox" style="display:none;" name="{{ f.DELETE.name }}" id="{{ f.DELETE.id_for_label }}">
+                <button type="button" class="btn btn-danger" data-remove>-</button>
+            {% endif %}
+        </td>
+    </tr>
+    {% endwith %}
+</template>
+
+<script>
+(function() {
+    const catalogMap = {{ catalog_map_json|safe }};
+    const catalogMapLc = Object.entries(catalogMap || {}).reduce((acc, [k, v]) => { acc[k.toLowerCase()] = v; return acc; }, {});
+
+    function formatAmount(num) {
+        if (!Number.isFinite(num) || num <= 0) return '--';
+        return num.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    function hookRows(container) {
+        const totalForms = container.querySelector('[name$="TOTAL_FORMS"]');
+        const addBtn = container.querySelector('[data-add-row]');
+        const tmpl = document.getElementById('empty-item-row');
+
+        function hookRow(row) {
+            const qty = row.querySelector('input[name$="-qty"]');
+            const rate = row.querySelector('input[name$="-rate"]');
+            const amountSlot = row.querySelector('[data-amount]');
+            const delInput = row.querySelector('input[name$="-DELETE"]');
+            const itemInput = row.querySelector('input[name$="-item_name"]');
+            const descInput = row.querySelector('input[name$="-description"]');
+
+            function fillDescription(force=false) {
+                if (!itemInput) return;
+                const val = itemInput.value.trim();
+                if (!val) return;
+                const match = catalogMap[val] || catalogMapLc[val.toLowerCase()];
+                if (match && (force || !descInput.value.trim())) descInput.value = match;
+            }
+            function update() {
+                const q = parseFloat(qty.value) || 0;
+                const r = parseFloat(rate.value) || 0;
+                amountSlot.textContent = formatAmount(q * r);
+            }
+            qty.addEventListener('input', update);
+            rate.addEventListener('input', update);
+            if (itemInput && descInput) {
+                const handler = () => fillDescription(true);
+                itemInput.addEventListener('input', handler);
+                itemInput.addEventListener('change', handler);
+            }
+            update();
+        }
+
+        container.querySelectorAll('.item-row').forEach(hookRow);
+
+        container.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-remove]');
+            if (!btn) return;
+            e.preventDefault();
+            const row = btn.closest('[data-row]');
+            if (!row) return;
+            const del = row.querySelector('input[name$="-DELETE"]');
+            if (del) {
+                del.checked = true;
+                del.value = 'on';
+            }
+            row.style.display = 'none';
+        });
+
+        if (addBtn && totalForms) {
+            addBtn.addEventListener('click', () => {
+                const idx = parseInt(totalForms.value, 10);
+                const clone = tmpl.content.cloneNode(true);
+                clone.querySelectorAll('input, select, textarea, label').forEach(el => {
+                    if (el.name) el.name = el.name.replace('__prefix__', idx);
+                    if (el.id) el.id = el.id.replace('__prefix__', idx);
+                });
+                container.querySelector('tbody').appendChild(clone);
+                totalForms.value = idx + 1;
+                const newRow = container.querySelectorAll('.item-row')[container.querySelectorAll('.item-row').length - 1];
+                if (newRow) hookRow(newRow);
+            });
+        }
+    }
+
+    document.querySelectorAll('[id^="items-body"]').forEach(body => {
+        const table = body.closest('.items-table');
+        if (table) hookRows(table);
+    });
+
+    // Block removal
+    document.getElementById('add-block')?.addEventListener('click', () => {
+        alert('Adding new blocks dynamically on the page is not yet wired; please submit one set at a time or duplicate via browser copy.'); // placeholder to avoid silent fail
+    });
+
+    document.querySelectorAll('[data-remove-block]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const panel = btn.closest('.panel');
+            const delInput = panel?.querySelector('input[name$="-DELETE"]');
+            if (delInput) {
+                delInput.checked = true;
+                delInput.value = 'on';
+                panel.style.display = 'none';
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

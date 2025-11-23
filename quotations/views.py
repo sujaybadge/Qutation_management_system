@@ -137,7 +137,8 @@ def quotation_multi_create(request):
         else:
             copy_error = f"No quotation found for code/id '{copy_param}'."
 
-    BlockFormSet = forms.formset_factory(QuotationBlockForm, extra=initial_blocks, can_delete=True, validate_min=True, min_num=1)
+    extra_forms = initial_blocks if block_initial is None else 0
+    BlockFormSet = forms.formset_factory(QuotationBlockForm, extra=extra_forms, can_delete=True, validate_min=True, min_num=1)
     if request.method == "POST":
         block_formset = BlockFormSet(request.POST, prefix="blocks")
     else:
@@ -237,6 +238,147 @@ def quotation_multi_create(request):
         "copy_error": copy_error,
     }
     return render(request, "quotations/quotation_multi_form.html", context)
+
+
+@login_required
+def quotation_multi_edit(request):
+    import sys
+    print("Entering quotation_multi_edit", file=sys.stderr)
+    quote_ids = request.GET.getlist("ids")
+    print(f"quote_ids: {quote_ids}", file=sys.stderr)
+
+    if not quote_ids:
+        messages.error(request, "No quotations selected for editing.")
+        return redirect(reverse("quotations:list"))
+
+    quotes = Quotation.objects.filter(id__in=quote_ids, created_by=request.user).order_by('id').prefetch_related("items", "seller_quotes")
+    quotes_dict = {str(q.id): q for q in quotes}
+    print(f"Found {len(quotes)} quotes.", file=sys.stderr)
+
+    if not quotes:
+        messages.error(request, "No matching quotations found for editing.")
+        return redirect(reverse("quotations:list"))
+
+    BlockFormSet = forms.formset_factory(QuotationBlockForm, extra=0, can_delete=True)
+    
+    if request.method == "POST":
+        print("Processing POST request", file=sys.stderr)
+        block_formset = BlockFormSet(request.POST, prefix="blocks")
+        
+        valid = block_formset.is_valid()
+        all_item_formsets = []
+        
+        if valid:
+            for bf in block_formset.forms:
+                quote_id = bf.cleaned_data.get('id')
+                if not quote_id:
+                    continue
+                
+                quote = quotes_dict.get(str(quote_id))
+                if not quote:
+                    continue
+
+                item_fs = get_item_formset(extra=1)(request.POST, instance=quote, prefix=f"items-{quote.id}")
+                all_item_formsets.append(item_fs)
+                if not item_fs.is_valid():
+                    valid = False
+
+        if valid:
+            updated_count = 0
+            deleted_count = 0
+            with transaction.atomic():
+                for idx, bf in enumerate(block_formset.forms):
+                    if not bf.cleaned_data:
+                        continue
+
+                    quote_id = bf.cleaned_data.get('id')
+                    quote = quotes_dict.get(str(quote_id))
+
+                    if not quote:
+                        continue
+
+                    if bf.cleaned_data.get("DELETE"):
+                        quote.delete()
+                        deleted_count += 1
+                        continue
+
+                    # This is tricky, the index of all_item_formsets might not match.
+                    # It's better to re-create the formset here or store them in a dict.
+                    items_fs = get_item_formset(extra=1)(request.POST, instance=quote, prefix=f"items-{quote.id}")
+                    if not items_fs.is_valid():
+                        # This should have been caught above, but as a safeguard.
+                        continue
+                    
+                    quote.buyer = bf.cleaned_data["buyer"]
+                    quote.notes = bf.cleaned_data.get("notes", "")
+                    quote.currency = bf.cleaned_data.get("currency") or "INR"
+                    quote.valid_until = bf.cleaned_data.get("valid_until")
+                    
+                    items_fs.instance = quote
+                    items_fs.save()
+
+                    quote.refresh_from_db()
+                    subtotal = sum(it.amount for it in quote.items.all())
+                    quote.subtotal = _money(subtotal)
+                    quote.tax = _money(subtotal * TAX_RATE)
+                    quote.total = _money(quote.subtotal + quote.tax)
+                    quote.save()
+
+                    tmpl = bf.cleaned_data.get("template")
+                    seller = bf.cleaned_data.get("seller")
+                    if seller and tmpl:
+                        sq, _ = SellerQuote.objects.update_or_create(
+                            quotation=quote,
+                            defaults={"seller": seller, "template": tmpl},
+                        )
+                    else:
+                        quote.seller_quotes.all().delete()
+
+                    updated_count += 1
+
+            if updated_count:
+                messages.success(request, f"Successfully updated {updated_count} quotation(s).")
+            if deleted_count:
+                messages.warning(request, f"Deleted {deleted_count} quotation(s).")
+            
+            return redirect(reverse("quotations:list"))
+        else:
+            print("Form validation failed.", file=sys.stderr)
+            # Re-render forms with errors
+            item_formsets = []
+            for q_id, q in quotes_dict.items():
+                item_formsets.append(get_item_formset(extra=1)(request.POST, instance=q, prefix=f"items-{q_id}"))
+
+    else: # GET
+        print("Processing GET request", file=sys.stderr)
+        initial_blocks = []
+        for q in quotes:
+            seller_quote = q.seller_quotes.first()
+            initial_blocks.append({
+                "id": q.id,
+                "buyer": q.buyer_id,
+                "notes": q.notes,
+                "currency": q.currency,
+                "valid_until": q.valid_until.date() if q.valid_until else None,
+                "seller": seller_quote.seller_id if seller_quote else None,
+                "template": seller_quote.template_id if seller_quote else None,
+            })
+        
+        block_formset = BlockFormSet(prefix="blocks", initial=initial_blocks)
+        item_formsets = [get_item_formset(extra=1)(instance=q, prefix=f"items-{q.id}") for q in quotes]
+
+    block_items = list(zip(block_formset.forms, item_formsets, quotes))
+    context = {
+        "block_formset": block_formset,
+        "block_items": block_items,
+        "item_formsets": item_formsets,
+        "quotes": quotes,
+        "instruction_suggestions": list(Instruction.objects.all().order_by("text").values_list("text", flat=True)),
+        "catalog_items": list(CatalogItem.objects.all().order_by("name").values_list("name", flat=True)),
+        "catalog_map_json": json.dumps({ci.name: ci.description for ci in CatalogItem.objects.all()}, ensure_ascii=False),
+    }
+    print("Rendering template quotation_multi_edit.html", file=sys.stderr)
+    return render(request, "quotations/quotation_multi_edit.html", context)
 
 
 @login_required
