@@ -99,6 +99,7 @@ class SellerQuote(models.Model):
     quotation = models.ForeignKey(Quotation, related_name="seller_quotes", on_delete=models.CASCADE)
     seller = models.ForeignKey(Company, on_delete=models.PROTECT)
     template = models.ForeignKey(TemplateStyle, on_delete=models.PROTECT)
+    seller_code = models.CharField(max_length=40, unique=True, default="")
     pdf_path = models.CharField(max_length=500, blank=True, default="")
 
     class Meta:

@@ -1,8 +1,8 @@
 from decimal import Decimal
 from django import forms
-from django.forms import inlineformset_factory
+from django.forms import inlineformset_factory, formset_factory
 
-from quotation_models.models import Buyer, Company, Quotation, QuotationItem
+from quotation_models.models import Buyer, Company, Quotation, QuotationItem, SellerQuote, TemplateStyle
 
 
 class CompanyForm(forms.ModelForm):
@@ -111,3 +111,59 @@ def get_item_formset(extra: int = 2):
 
 
 QuotationItemFormSet = get_item_formset()
+
+
+class SellerQuoteForm(forms.ModelForm):
+    class Meta:
+        model = SellerQuote
+        fields = ["seller", "template"]
+        widgets = {
+            "seller": forms.Select(),
+            "template": forms.Select(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["seller"].queryset = Company.objects.order_by("-is_main", "name")
+        self.fields["template"].queryset = TemplateStyle.objects.order_by("code")
+
+
+def get_seller_formset(extra: int = 1):
+    return inlineformset_factory(
+        Quotation,
+        SellerQuote,
+        form=SellerQuoteForm,
+        fields=["seller", "template"],
+        extra=extra,
+        can_delete=True,
+        validate_min=False,
+        min_num=0,
+    )
+
+
+SellerQuoteFormSet = get_seller_formset()
+
+
+class QuotationBlockForm(forms.Form):
+    buyer = forms.ModelChoiceField(queryset=Buyer.objects.order_by("name"))
+    seller = forms.ModelChoiceField(queryset=Company.objects.order_by("-is_main", "name"))
+    template = forms.ModelChoiceField(queryset=TemplateStyle.objects.order_by("code"))
+    notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2, "placeholder": "Notes / Terms"}))
+    currency = forms.CharField(required=False, initial="INR", widget=forms.TextInput(attrs={"placeholder": "INR"}))
+    valid_until = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Refresh querysets at runtime so newly added records appear.
+        self.fields["buyer"].queryset = Buyer.objects.order_by("name")
+        self.fields["seller"].queryset = Company.objects.order_by("-is_main", "name")
+        self.fields["template"].queryset = TemplateStyle.objects.order_by("code")
+
+
+PlainItemFormSet = formset_factory(
+    QuotationItemForm,
+    extra=2,
+    can_delete=True,
+    validate_min=False,
+    min_num=0,
+)

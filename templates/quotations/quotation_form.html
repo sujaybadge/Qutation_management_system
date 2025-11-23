@@ -44,9 +44,8 @@
                 {% for error in form.notes.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
             </div>
         </div>
-
         {% if quotation %}
-            <div class="tag" style="margin: 6px 0 12px 0;">Current totals — Subtotal: ₹ {{ quotation.subtotal }} • Tax: ₹ {{ quotation.tax }} • Total: ₹ {{ quotation.total }}</div>
+            <div class="tag" style="margin: 6px 0 12px 0;">Current totals – Subtotal: ₹ {{ quotation.subtotal }} • Tax: ₹ {{ quotation.tax }} • Total: ₹ {{ quotation.total }}</div>
         {% endif %}
 
         <div class="items-table">
@@ -123,7 +122,6 @@
     </tr>
     {% endwith %}
 </template>
-
 <script>
 (function() {
     const tableBody = document.getElementById('items-body');
@@ -209,6 +207,7 @@
             if (newItemRow) hookRow(newItemRow);
         });
     }
+
 })();
 </script>
 {% endblock %}

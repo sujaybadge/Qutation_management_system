@@ -7,6 +7,7 @@ app_name = "quotations"
 urlpatterns = [
     path("", views.quotation_list, name="list"),
     path("quotes/new/", views.quotation_create, name="create"),
+    path("quotes/multi/new/", views.quotation_multi_create, name="multi_create"),
     path("quotes/<int:pk>/edit/", views.quotation_edit, name="edit"),
     path("quotes/<int:pk>/copy/", views.quotation_copy, name="copy"),
     path("quotes/<int:pk>/delete/", views.quotation_delete, name="delete"),
