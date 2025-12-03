@@ -74,6 +74,7 @@
                     <td><span class="tag amber">{{ item_count }} item{{ item_count|pluralize }}</span></td>
                     {% endwith %}
                     <td class="actions">
+                        <a class="btn-secondary btn" href="{% url 'quotations:print' q.id %}" target="_blank">Print</a>
                         <a class="btn-secondary btn" href="{% url 'quotations:edit' q.id %}">Edit</a>
                         <a class="btn btn" href="{% url 'quotations:copy' q.id %}">Copy</a>
                         <form method="post" action="{% url 'quotations:delete' q.id %}" style="display:inline" onsubmit="return confirm('Delete this quotation?');">

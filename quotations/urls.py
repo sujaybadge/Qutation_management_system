@@ -12,6 +12,7 @@ urlpatterns = [
     path("quotes/<int:pk>/edit/", views.quotation_edit, name="edit"),
     path("quotes/<int:pk>/copy/", views.quotation_copy, name="copy"),
     path("quotes/<int:pk>/delete/", views.quotation_delete, name="delete"),
+    path("quotes/<int:pk>/print/", views.quotation_print, name="print"),
     path("companies/", views.company_list, name="company_list"),
     path("companies/new/", views.company_create, name="company_create"),
     path("companies/<int:pk>/edit/", views.company_edit, name="company_edit"),

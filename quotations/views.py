@@ -590,3 +590,17 @@ def buyer_quotes(request, pk: int):
     buyer = get_object_or_404(Buyer, pk=pk)
     quotes = Quotation.objects.filter(buyer=buyer, created_by=request.user).order_by("-created_at").prefetch_related("items")
     return render(request, "quotations/buyer_quotes.html", {"buyer": buyer, "quotes": quotes})
+
+
+@login_required
+def quotation_print(request, pk: int):
+    """Render quotation in a print-friendly format."""
+    quotation = get_object_or_404(Quotation.objects.prefetch_related("items"), pk=pk)
+    
+    context = {
+        "quotation": quotation,
+        "buyer": quotation.buyer,
+        "items": quotation.items.all(),
+        "company": Company.objects.filter(is_main=True).first(),
+    }
+    return render(request, "quotations/quotation_print.html", context)
