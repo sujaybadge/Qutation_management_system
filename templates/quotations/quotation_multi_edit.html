@@ -8,6 +8,12 @@
     </div>
     <a class="btn-secondary btn" href="{% url 'quotations:list' %}">Back to list</a>
 </div>
+<style>
+    select option {
+        background-color: #333 !important;
+        color: #fff !important;
+    }
+</style>
 
 <form method="post" novalidate>
     {% csrf_token %}
