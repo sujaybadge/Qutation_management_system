@@ -48,6 +48,7 @@ class Quotation(models.Model):
     buyer = models.ForeignKey(Buyer, on_delete=models.PROTECT)
     created_by = models.ForeignKey(User, on_delete=models.PROTECT)
     notes = models.TextField(blank=True, default="")
+    include_gst = models.BooleanField(default=True)
     currency = models.CharField(max_length=8, default="INR")
     created_at = models.DateTimeField(auto_now_add=True)
     valid_until = models.DateTimeField(null=True, blank=True)

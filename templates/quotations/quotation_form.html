@@ -14,7 +14,7 @@
             {% elif mode == "copy" %}Copy from {{ quotation.code }}
             {% else %}New quotation{% endif %}
         </h1>
-        <p class="page-subtitle">Buyer, notes, and line items all live here. Totals are recalculated with 18% tax on save.</p>
+        <p class="page-subtitle">Buyer, notes, and line items all live here. Totals are recalculated on save; GST applies only if 'Include GST' is checked.</p>
     </div>
     <div class="actions">
         <a class="btn-secondary btn" href="{% url 'quotations:list' %}">Back to list</a>
@@ -48,6 +48,9 @@
                 <label for="{{ form.notes.id_for_label }}">Notes / Terms</label>
                 {{ form.notes }}
                 {% for error in form.notes.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                {{ form.include_gst }} <label for="{{ form.include_gst.id_for_label }}">Include GST (18%)</label>
             </div>
         </div>
         {% if quotation %}

@@ -1,3 +1,4 @@
+{% load quote_filters %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -292,12 +293,12 @@ Phone No. - {{ company.phone }}{% endif %}{% else %}HIGHSCHOOL ROAD, NEAR DEVAL 
             <div class="terms-box">
                 <span class="terms-title">Terms & Conditions:</span>
                 <ul style="padding-left: 20px; margin: 0;">
-                    <li>GST 18% extra</li>
+                    <!-- <li>GST 18% extra</li>
                     <li>Valid for 2 days</li>
-                    <li>Payment 100% in advance</li>
-                    {% if quotation.notes %}
-                    <li>{{ quotation.notes }}</li>
-                    {% endif %}
+                    <li>Payment 100% in advance</li> -->
+                    {% for line in quotation.notes|split_lines %}
+                        <li>{{ line }}</li>
+                    {% endfor %}
                 </ul>
             </div>
 

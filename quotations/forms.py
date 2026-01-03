@@ -41,11 +41,13 @@ class QuotationForm(forms.ModelForm):
 
     class Meta:
         model = Quotation
-        fields = ["buyer", "notes", "currency", "valid_until"]
+        fields = ["buyer", "notes", "include_gst", "currency", "valid_until"]
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3, "placeholder": "Terms & conditions or notes"}),
             "currency": forms.TextInput(attrs={"placeholder": "INR"}),
         }
+
+    include_gst = forms.BooleanField(required=False, initial=True, label="Include GST (18%)")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -149,9 +151,10 @@ class QuotationBlockForm(forms.Form):
     buyer = forms.ModelChoiceField(queryset=Buyer.objects.order_by("name"))
     seller = forms.ModelChoiceField(queryset=Company.objects.order_by("-is_main", "name"))
     template = forms.ModelChoiceField(queryset=TemplateStyle.objects.order_by("code"))
-    notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2, "placeholder": "Notes / Terms"}))
+    notes = forms.CharField(required=False, initial="GST 18% extra\nValid for 2 days\nPayment 100% in advance", widget=forms.Textarea(attrs={"rows": 2, "placeholder": "Notes / Terms"}))
     currency = forms.CharField(required=False, initial="INR", widget=forms.TextInput(attrs={"placeholder": "INR"}))
     valid_until = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    include_gst = forms.BooleanField(required=False, initial=True, label="Include GST (18%)")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
