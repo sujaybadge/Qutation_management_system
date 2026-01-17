@@ -609,11 +609,11 @@ def buyer_quotes(request, pk: int):
 def quotation_print(request, pk: int):
     """Render quotation in a print-friendly format."""
     quotation = get_object_or_404(Quotation.objects.prefetch_related("items"), pk=pk)
-    
+    # add serial no 1,2, 3, 4 
     context = {
         "quotation": quotation,
         "buyer": quotation.buyer,
-        "items": quotation.items.all(),
+        "items": list(enumerate(quotation.items.all(), start=1)),
         "company": Company.objects.filter(is_main=True).first(),
     }
     return render(request, "quotations/quotation_print.html", context)

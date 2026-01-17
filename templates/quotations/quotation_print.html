@@ -1,4 +1,5 @@
 {% load quote_filters %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -190,11 +191,17 @@
             margin-right: 3px;
         }
 
+        .header-img {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
     </style>
 </head>
 <body>
 
     <div class="page-container">
+        <img src="{% static 'header.png' %}" alt="Header" class="header-img">
         
         <!-- 1. Quotation Title -->
         <div class="main-title">QUOTATION</div>
@@ -244,15 +251,17 @@ Phone No. - {{ company.phone }}{% endif %}{% else %}HIGHSCHOOL ROAD, NEAR DEVAL 
         <table>
             <thead>
                 <tr>
-                    <th style="width: 50%;">Description</th>
+                    <th style="width: 5%;">Sr.</th>
+                    <th style="width: 45%;">Description</th>
                     <th style="width: 10%;">Quantity</th>
                     <th style="width: 20%;">Rate</th>
                     <th style="width: 20%;">Amount</th>
                 </tr>
             </thead>
             <tbody>
-                {% for item in items %}
+                {% for idx, item in items %}
                 <tr>
+                    <td style="text-align: center;">{{ idx }}</td>
                     <td class="col-desc">
                         {% if item.item_name %}
                             <strong>{{ item.item_name }}</strong>
@@ -271,16 +280,19 @@ Phone No. - {{ company.phone }}{% endif %}{% else %}HIGHSCHOOL ROAD, NEAR DEVAL 
                 <tr>
                     <td style="border: none;"></td>
                     <td style="border: none;"></td>
+                    <td style="border: none;"></td>
                     <td style="text-align: right; font-weight: bold; border-bottom: 1px solid #000;">Subtotal:</td>
                     <td class="col-amount" style="font-weight: bold;">{{ quotation.subtotal|floatformat:2 }}</td>
                 </tr>
                 <tr>
                     <td style="border: none;"></td>
                     <td style="border: none;"></td>
+                    <td style="border: none;"></td>
                     <td style="text-align: right; font-weight: bold; border-bottom: 1px solid #000;">Tax (18%):</td>
                     <td class="col-amount" style="font-weight: bold;">{{ quotation.tax|floatformat:2 }}</td>
                 </tr>
                 <tr>
+                    <td style="border: none;"></td>
                     <td style="border: none;"></td>
                     <td style="border: none;"></td>
                     <td style="text-align: right; font-weight: bold; border-bottom: 2px solid #000;">Net Amount:</td>
