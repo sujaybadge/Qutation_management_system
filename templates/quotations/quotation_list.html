@@ -77,10 +77,7 @@
                         <a class="btn-secondary btn" href="{% url 'quotations:print' q.id %}" target="_blank">Print</a>
                         <a class="btn-secondary btn" href="{% url 'quotations:edit' q.id %}">Edit</a>
                         <a class="btn btn" href="{% url 'quotations:copy' q.id %}">Copy</a>
-                        <form method="post" action="{% url 'quotations:delete' q.id %}" style="display:inline" onsubmit="return confirm('Delete this quotation?');">
-                            {% csrf_token %}
-                            <button class="btn btn-danger" type="submit">Delete</button>
-                        </form>
+                        <a class="btn btn-danger" href="{% url 'quotations:delete' q.id %}">Delete</a>
                     </td>
                 </tr>
                 {% endfor %}

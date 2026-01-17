@@ -129,7 +129,6 @@ def quotation_multi_create(request):
                 {
                     "buyer": copy_source.buyer_id,
                     "notes": copy_source.notes,
-                    "include_gst": copy_source.include_gst,
                     "currency": copy_source.currency,
                     "valid_until": copy_source.valid_until.date() if copy_source.valid_until else None,
                 }
@@ -178,10 +177,11 @@ def quotation_multi_create(request):
                     desc = (form.cleaned_data.get("description") or "").strip()
                     qty = Decimal(form.cleaned_data.get("qty") or 0)
                     rate = Decimal(form.cleaned_data.get("rate") or 0)
+                    is_gst = form.cleaned_data.get("is_gst_applicable", True)
                     if not name and not desc and qty <= 0:
                         continue
                     amount = _money(qty * rate)
-                    items_payload.append({"name": name, "desc": desc, "qty": qty, "rate": rate, "amount": amount})
+                    items_payload.append({"name": name, "desc": desc, "qty": qty, "rate": rate, "amount": amount, "is_gst": is_gst})
                 if not items_payload:
                     bf.add_error(None, "At least one item is required for this quote.")
                     continue
@@ -191,27 +191,28 @@ def quotation_multi_create(request):
                     buyer=bf.cleaned_data["buyer"],
                     created_by=request.user,
                     notes=bf.cleaned_data.get("notes", ""),
-                    include_gst=bool(bf.cleaned_data.get("include_gst", True)),
+                    include_gst=True, # Deprecated global flag, defaulting to True
                     currency=bf.cleaned_data.get("currency") or "INR",
                     valid_until=bf.cleaned_data.get("valid_until"),
                 )
                 subtotal = Decimal("0.00")
+                tax_total = Decimal("0.00")
                 for it in items_payload:
                     QuotationItem.objects.create(
                         quotation=q,
                         item_name=it["name"],
                         description=it["desc"],
+                        is_gst_applicable=it["is_gst"],
                         qty=it["qty"],
                         rate=it["rate"],
                         amount=it["amount"],
                     )
                     subtotal += it["amount"]
+                    if it["is_gst"]:
+                        tax_total += it["amount"] * TAX_RATE
 
                 q.subtotal = _money(subtotal)
-                if q.include_gst:
-                    q.tax = _money(subtotal * TAX_RATE)
-                else:
-                    q.tax = _money(Decimal('0.00'))
+                q.tax = _money(tax_total)
                 q.total = _money(q.subtotal + q.tax)
                 q.save()
 
@@ -316,7 +317,6 @@ def quotation_multi_edit(request):
                     
                     quote.buyer = bf.cleaned_data["buyer"]
                     quote.notes = bf.cleaned_data.get("notes", "")
-                    quote.include_gst = bool(bf.cleaned_data.get("include_gst", True))
                     quote.currency = bf.cleaned_data.get("currency") or "INR"
                     quote.valid_until = bf.cleaned_data.get("valid_until")
                     
@@ -325,11 +325,10 @@ def quotation_multi_edit(request):
 
                     quote.refresh_from_db()
                     subtotal = sum(it.amount for it in quote.items.all())
+                    tax_total = sum(it.amount * TAX_RATE for it in quote.items.all() if it.is_gst_applicable)
+                    
                     quote.subtotal = _money(subtotal)
-                    if quote.include_gst:
-                        quote.tax = _money(subtotal * TAX_RATE)
-                    else:
-                        quote.tax = _money(Decimal('0.00'))
+                    quote.tax = _money(tax_total)
                     quote.total = _money(quote.subtotal + quote.tax)
                     quote.save()
 
@@ -367,7 +366,6 @@ def quotation_multi_edit(request):
                 "id": q.id,
                 "buyer": q.buyer_id,
                     "notes": q.notes,
-                    "include_gst": q.include_gst,
                 "currency": q.currency,
                 "valid_until": q.valid_until.date() if q.valid_until else None,
                 "seller": seller_quote.seller_id if seller_quote else None,
@@ -418,7 +416,7 @@ def _handle_quotation_form(request, mode: str, instance: Quotation | None = None
         extra_rows = 1
 
     if not initial:
-        initial = {"currency": "INR", "notes": "GST 18% extra\nValid for 2 days\nPayment 100% in advance", "include_gst": True}
+        initial = {"currency": "INR", "notes": "GST 18% extra\nValid for 2 days\nPayment 100% in advance"}
     else:
         initial.setdefault("currency", "INR")
 
@@ -478,12 +476,10 @@ def _handle_quotation_form(request, mode: str, instance: Quotation | None = None
             # Recalculate totals from all items in the database
             quotation.refresh_from_db()
             subtotal = sum(item.amount for item in quotation.items.all())
+            tax_total = sum(item.amount * TAX_RATE for item in quotation.items.all() if item.is_gst_applicable)
             
             quotation.subtotal = _money(subtotal)
-            if getattr(quotation, 'include_gst', True):
-                quotation.tax = _money(subtotal * TAX_RATE)
-            else:
-                quotation.tax = _money(Decimal('0.00'))
+            quotation.tax = _money(tax_total)
             quotation.total = _money(quotation.subtotal + quotation.tax)
             quotation.save()
 

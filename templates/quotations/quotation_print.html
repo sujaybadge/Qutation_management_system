@@ -177,7 +177,7 @@
         }
 
         .signature-block {
-            margin-top: 35vh;
+            margin-top: 20vh;
             text-align: center;
             width: 200px;
             font-weight: bold;
@@ -252,7 +252,8 @@ Phone No. - {{ company.phone }}{% endif %}{% else %}HIGHSCHOOL ROAD, NEAR DEVAL 
             <thead>
                 <tr>
                     <th style="width: 5%;">Sr.</th>
-                    <th style="width: 45%;">Description</th>
+                    <th style="width: 40%;">Description</th>
+                    <th style="width: 5%;">GST</th>
                     <th style="width: 10%;">Quantity</th>
                     <th style="width: 20%;">Rate</th>
                     <th style="width: 20%;">Amount</th>
@@ -265,11 +266,16 @@ Phone No. - {{ company.phone }}{% endif %}{% else %}HIGHSCHOOL ROAD, NEAR DEVAL 
                     <td class="col-desc">
                         {% if item.item_name %}
                             <strong>{{ item.item_name }}</strong>
-                            {% if item.description %}<br><small>{{ item.description }}</small>{% endif %}
+                            {% if item.description %}
+                                <br><small>
+                                {% for line in item.description|split_lines %}{{ line }}<br>{% endfor %}
+                                </small>
+                            {% endif %}
                         {% else %}
-                            {{ item.description }}
+                            {% for line in item.description|split_lines %}{{ line }}<br>{% endfor %}
                         {% endif %}
                     </td>
+                    <td style="text-align: center;">{% if item.is_gst_applicable %}✔{% endif %}</td>
                     <td class="col-qty">{{ item.qty|floatformat:"-2" }}</td>
                     <td class="col-rate">{{ item.rate|floatformat:2 }}</td>
                     <td class="col-amount">{{ item.amount|floatformat:2 }}</td>
@@ -281,6 +287,7 @@ Phone No. - {{ company.phone }}{% endif %}{% else %}HIGHSCHOOL ROAD, NEAR DEVAL 
                     <td style="border: none;"></td>
                     <td style="border: none;"></td>
                     <td style="border: none;"></td>
+                    <td style="border: none;"></td>
                     <td style="text-align: right; font-weight: bold; border-bottom: 1px solid #000;">Subtotal:</td>
                     <td class="col-amount" style="font-weight: bold;">{{ quotation.subtotal|floatformat:2 }}</td>
                 </tr>
@@ -288,10 +295,12 @@ Phone No. - {{ company.phone }}{% endif %}{% else %}HIGHSCHOOL ROAD, NEAR DEVAL 
                     <td style="border: none;"></td>
                     <td style="border: none;"></td>
                     <td style="border: none;"></td>
+                    <td style="border: none;"></td>
                     <td style="text-align: right; font-weight: bold; border-bottom: 1px solid #000;">Tax (18%):</td>
                     <td class="col-amount" style="font-weight: bold;">{{ quotation.tax|floatformat:2 }}</td>
                 </tr>
                 <tr>
+                    <td style="border: none;"></td>
                     <td style="border: none;"></td>
                     <td style="border: none;"></td>
                     <td style="border: none;"></td>

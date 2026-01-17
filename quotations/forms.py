@@ -41,13 +41,11 @@ class QuotationForm(forms.ModelForm):
 
     class Meta:
         model = Quotation
-        fields = ["buyer", "notes", "include_gst", "currency", "valid_until"]
+        fields = ["buyer", "notes", "currency", "valid_until"]
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3, "placeholder": "Terms & conditions or notes"}),
             "currency": forms.TextInput(attrs={"placeholder": "INR"}),
         }
-
-    include_gst = forms.BooleanField(required=False, initial=True, label="Include GST (18%)")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,10 +61,11 @@ class QuotationItemForm(forms.ModelForm):
 
     class Meta:
         model = QuotationItem
-        fields = ["item_name", "description", "qty", "rate"]
+        fields = ["item_name", "description", "is_gst_applicable", "qty", "rate"]
         widgets = {
             "item_name": forms.TextInput(attrs={"placeholder": "Item name", "list": "item-suggestions"}),
             "description": forms.TextInput(attrs={"placeholder": "Description / instructions", "list": "instruction-suggestions"}),
+            "is_gst_applicable": forms.CheckboxInput(attrs={"style": "width: 18px; height: 18px; cursor: pointer;"}),
             "qty": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             "rate": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
         }
@@ -104,7 +103,7 @@ def get_item_formset(extra: int = 2):
         Quotation,
         QuotationItem,
         form=QuotationItemForm,
-        fields=["item_name", "description", "qty", "rate"],
+        fields=["item_name", "description", "is_gst_applicable", "qty", "rate"],
         extra=extra,
         can_delete=True,
         validate_min=False,
@@ -154,7 +153,6 @@ class QuotationBlockForm(forms.Form):
     notes = forms.CharField(required=False, initial="GST 18% extra\nValid for 2 days\nPayment 100% in advance", widget=forms.Textarea(attrs={"rows": 2, "placeholder": "Notes / Terms"}))
     currency = forms.CharField(required=False, initial="INR", widget=forms.TextInput(attrs={"placeholder": "INR"}))
     valid_until = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-    include_gst = forms.BooleanField(required=False, initial=True, label="Include GST (18%)")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

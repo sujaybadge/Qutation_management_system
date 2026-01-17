@@ -48,9 +48,6 @@
         <div class="field-row">
             <label>Notes / Terms</label>
             {{ bf.notes }}{% for e in bf.notes.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ e }}</div>{% endfor %}
-            <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
-                {{ bf.include_gst }} <label for="{{ bf.include_gst.id_for_label }}">Include GST (18%)</label>
-            </div>
         </div>
 
         <div class="items-table" style="margin-top:10px;">
@@ -58,7 +55,8 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width:42%">Item & description</th>
+                        <th style="width:40%">Item & description</th>
+                        <th style="width:5%">GST</th>
                         <th style="width:14%">Qty</th>
                         <th style="width:16%">Rate</th>
                         <th style="width:16%">Amount</th>
@@ -71,10 +69,13 @@
                         {{ f.id }}
                         <td class="item-cell">
                             <div>{{ f.item_name }}</div>
-                            <div style="margin-top:6px;">{{ f.description }}</div>
+                            <div style="margin-top:6px;">
+                                <textarea name="{{ f.description.html_name }}" id="{{ f.description.id_for_label }}" rows="2" style="width:100%; resize:vertical;">{{ f.description.value|default_if_none:"" }}</textarea>
+                            </div>
                             {% for error in f.item_name.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
                             {% for error in f.description.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}
                         </td>
+                        <td style="text-align:center; vertical-align:top; padding-top:10px;">{{ f.is_gst_applicable }}</td>
                         <td>{{ f.qty }}{% for error in f.qty.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}</td>
                         <td>{{ f.rate }}{% for error in f.rate.errors %}<div class="page-subtitle" style="color:#fca5a5">{{ error }}</div>{% endfor %}</td>
                         <td class="amount-cell"><span data-amount>--</span></td>
@@ -139,8 +140,11 @@
         {{ f.id }}
         <td class="item-cell">
             <div>{{ f.item_name }}</div>
-            <div style="margin-top:6px;">{{ f.description }}</div>
+            <div style="margin-top:6px;">
+                <textarea name="{{ f.description.html_name }}" id="{{ f.description.id_for_label }}" rows="2" style="width:100%; resize:vertical;">{{ f.description.value|default_if_none:"" }}</textarea>
+            </div>
         </td>
+        <td style="text-align:center; vertical-align:top; padding-top:10px;">{{ f.is_gst_applicable }}</td>
         <td>{{ f.qty }}</td>
         <td>{{ f.rate }}</td>
         <td class="amount-cell"><span data-amount>--</span></td>
@@ -175,7 +179,7 @@
             const amountSlot = row.querySelector('[data-amount]');
             const delInput = row.querySelector('input[name$="-DELETE"]');
             const itemInput = row.querySelector('input[name$="-item_name"]');
-            const descInput = row.querySelector('input[name$="-description"]');
+            const descInput = row.querySelector('[name$="-description"]');
 
             function fillDescription(force=false) {
                 if (!itemInput) return;
